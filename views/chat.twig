@@ -1,0 +1,66 @@
+{% extends 'layout.twig' %}
+
+{% block body %}
+  
+
+  <div class="chat-container">
+    
+
+    <div class="chat-header">Chat Room</div>
+    <div id="chatArea" class="message-container"></div>
+    <br>
+    <input type="text" onkeyup="isTyping()" id="msg">
+    <button onclick="sendMsg()">Click me</button>
+  </div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    var name = prompt("Enter your name !");
+    var socket = io({ query: { username: name } }); // Send the username to the server during connection
+
+    socket.on("msg", (data) => {
+        var messageData = JSON.parse(data);
+        var chatArea = document.getElementById("chatArea");
+        var messageClass = messageData.username === name ? 'sent-message' : 'received-message';
+
+        // Create a new div element for each message
+        var messageElement = document.createElement('div');
+        messageElement.className = messageClass;
+        messageElement.textContent = `${messageData.username}: ${messageData.message}`;
+        chatArea.appendChild(messageElement);
+        chatArea.scrollTop = chatArea.scrollHeight; // Auto-scroll to the bottom
+    });
+
+    function sendMsg() {
+        var input = document.getElementById("msg");
+        if (input.value) {
+            var messageData = {
+                username: name,
+                message: input.value
+            };
+            socket.emit("send-msg", JSON.stringify(messageData));
+            input.value = '';
+        }
+    }
+
+    function isTyping() {
+        var data = name + " is typing...";
+        console.log(data);
+        socket.emit("uTyping", data);
+    }
+
+    socket.on("msg-typing", (data) => {
+        var chatArea = document.getElementById("chatArea");
+        // Create a new div element for each typing notification
+        var messageElement = document.createElement('div');
+        messageElement.className = 'typing-notification';
+        messageElement.textContent = data;
+        chatArea.appendChild(messageElement);
+        chatArea.scrollTop = chatArea.scrollHeight; // Auto-scroll to the bottom
+
+        setTimeout(() => {
+            // Remove typing notification after 2 seconds
+            messageElement.remove();
+        }, 2000);
+    });
+  </script>
+{% endblock %}
